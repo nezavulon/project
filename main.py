@@ -7,10 +7,15 @@ from pygame import *
 
 # Объявляем переменные
 
+fert = open('files/res.txt', mode='r')
+data_txt = fert.read().split(' ')
 level = 1
+lev = 1
+wins = int(data_txt[1])
+dies = int(data_txt[0])
 screen_width = GetSystemMetrics(0)
 screen_height = GetSystemMetrics(1)
-PLATFORM_WIDTH = 32
+PLATFORM_WIDTH = 30
 PLATFORM_HEIGHT = 30
 PLATFORM_COLOR = "#6A5ACD"
 back_color = "#003153"
@@ -21,25 +26,25 @@ JUMP = 10
 GRAVITY = 0.40
 plrCOLOR = "#18A7B5"
 plrANIMATION_RIGHT = [
-    ('r1.png'),
-    ('r2.png'),
-    ('r3.png'),
-    ('r4.png'),
-    ('r5.png'),
-    ('r6.png'),
-    ('r7.png'),
-    ('r8.png')
+    'files/r1.png',
+    'files/r2.png',
+    'files/r3.png',
+    'files/r4.png',
+    'files/r5.png',
+    'files/r6.png',
+    'files/r7.png',
+    'files/r8.png'
 ]
 plrRIGHT = 0
 plrANIMATION_LEFT = [
-    ('l1.png'),
-    ('l2.png'),
-    ('l3.png'),
-    ('l4.png'),
-    ('l5.png'),
-    ('l6.png'),
-    ('l7.png'),
-    ('l8.png')
+    'files/l1.png',
+    'files/l2.png',
+    'files/l3.png',
+    'files/l4.png',
+    'files/l5.png',
+    'files/l6.png',
+    'files/l7.png',
+    'files/l8.png'
 ]
 plrLEFT = 0
 LEFTorRIGHT = 1
@@ -50,12 +55,22 @@ class Platform(sprite.Sprite):
     def __init__(self, x, y):
         sprite.Sprite.__init__(self)
         self.image = Surface((PLATFORM_WIDTH, PLATFORM_HEIGHT))
-        self.image = image.load("platform.png")
+        self.image = image.load("files/platform.png")
         self.rect = Rect(x, y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
 
 
-# Это класс игрока как обьекта где назодяться основные данные и формулы и условия
-# В будующем планирую добавить к этому классу большую часть игры
+class BlockDie(Platform):
+    def __init__(self, x, y):
+        Platform.__init__(self, x, y)
+        self.image = image.load("files/dieBlock.png")
+
+
+class BlockFinish(Platform):
+    def __init__(self, x, y):
+        Platform.__init__(self, x, y)
+        self.image = image.load("files/finishBlock.png")
+
+
 class Player(sprite.Sprite):
     def __init__(self, x, y):
         sprite.Sprite.__init__(self)
@@ -68,6 +83,15 @@ class Player(sprite.Sprite):
         self.image.fill(Color(plrCOLOR))
         self.rect = Rect(x, y, plrWIDTH, plrHEIGHT)
 
+    def die(self):
+        global dies
+        dies += 1
+        defeat_screen()
+
+    def win(self):
+        global wins
+        wins += 1
+        victoty_screen()
 
     def update(self, left, right, up, platforms):
         global plrLEFT, plrRIGHT, LEFTorRIGHT
@@ -97,10 +121,10 @@ class Player(sprite.Sprite):
             self.xvel = 0
             if LEFTorRIGHT == 1:
                 pygame.time.Clock().tick(60)
-                self.image = image.load("r0.png")
+                self.image = image.load("files/r0.png")
             elif LEFTorRIGHT == 0:
                 pygame.time.Clock().tick(60)
-                self.image = image.load("l0.png")
+                self.image = image.load("files/l0.png")
 
         if up:
             if self.onGround:
@@ -117,8 +141,15 @@ class Player(sprite.Sprite):
         self.collide(self.xvel, 0, platforms)
 
     def collide(self, xvel, yvel, platforms):
+        global won
         for p in platforms:
             if sprite.collide_rect(self, p):
+                if isinstance(p, BlockDie):
+                    won = 0
+                    self.die()
+                if isinstance(p, BlockFinish):
+                    won = 1
+                    self.win()
 
                 if xvel > 0:
                     self.rect.right = p.rect.left
@@ -171,122 +202,298 @@ def get_resolution():
 
 
 def main_menu():
+    global wins
+    global dies
     pygame.init()
     screen = pygame.display.set_mode(get_resolution())
     pygame.display.set_caption("Alpha_0.1")
     screen.fill(Color(back_color))
 
-    font = pygame.font.Font(None, 36)
-
     def draw_text(text, color, x, y):
+        font = pygame.font.SysFont('Calibri', 36)
         label = font.render(text, True, color)
         screen.blit(label, (x, y))
+
 
     while True:
         screen.fill((30, 30, 30))
         but_width = screen_width / 2 - 50
-        draw_text("Monster hunter 2D", (255, 255, 255), screen_width / 2 - 110, screen_height / 2 - 250)
+        but_h = screen_height / 2 - 50
+        draw_text("ESCAPER 2D", (255, 255, 255), screen_width / 2 - 90, screen_height / 2 - 250)
         draw_text("Level 1", (255, 255, 255), but_width, screen_height / 2 - 200)
-        draw_text("Level 2 (Пока не доделан)", (255, 255, 255), but_width, screen_height / 2 - 150)
+        draw_text("Level 2", (255, 255, 255), but_width, screen_height / 2 - 150)
         draw_text("Exit", (255, 255, 255), but_width, screen_height / 2 - 100)
+        draw_text("Total wins and dies: " + str(wins) + ' ' + str(dies), (255, 255, 255), but_width - 50, but_h)
+        draw_text("Reference", (255, 255, 255), but_width, screen_height / 2)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                f = open("files/res.txt", mode="w")
+                dies_and_wins = str(dies) + ' ' + str(wins)
+                f.write(dies_and_wins)
+                f.close()
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if but_width <= x <= but_width + 200 and screen_height / 2 - 200 <= y <= screen_height / 2 - 160:
-                    level_1(screen)
+                    level_1()
                 elif but_width <= x <= but_width + 200 and screen_height / 2 - 150 <= y <= screen_height / 2 - 110:
-                    level_2(screen)
+                    level_2()
+                elif but_width <= x <= but_width + 200 and screen_height / 2 <= y <= screen_height / 2 + 40:
+                    spravka()
                 elif but_width <= x <= but_width + 200 and screen_height / 2 - 100 <= y <= screen_height / 2 - 60:
+                    f = open("files/res.txt", mode="w")
+                    dies_and_wins = str(dies) + ' ' + str(wins)
+                    f.write(dies_and_wins)
+                    f.close()
                     pygame.quit()
                     sys.exit()
 
         pygame.display.flip()
 
 
-def level_1(screen):
-    global level
-    level = 1
-    main()
-
-
-def level_2(screen):
-    global level
-    level = 2
-    in_work(screen)
-    pass
-
-
-def victory_screen(screen):
-    screen.fill((30, 30, 30))
-    draw_text("You won!", (255, 255, 255), 350, 200)
-    pygame.display.flip()
-    pygame.time.wait(2000)
-    main_menu()
-
-
-def defeat_screen(screen):
-    screen.fill((30, 30, 30))
-    draw_text("You lost!", (255, 255, 255), 350, 200)
-    pygame.display.flip()
-    pygame.time.wait(2000)
-    main_menu()
-
-
-#
-def main():
+def spravka():
+    global wins
+    global dies
     pygame.init()
     screen = pygame.display.set_mode(get_resolution())
     pygame.display.set_caption("Alpha_0.1")
     screen.fill(Color(back_color))
-    background_image = pygame.image.load('background.png')
+
+    def draw_text(text, color, x, y):
+        font = pygame.font.SysFont('Calibri', 36)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    def draw_name(text, color, x, y):
+        font = pygame.font.SysFont('serif', 50)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    while True:
+        screen.fill((30, 30, 30))
+        but_width = screen_width / 2 - 50
+        but_h = screen_height / 2 - 50
+        draw_name("Авторы:", (255, 255, 255), screen_width / 2 - 150, screen_height / 2 - 250)
+        draw_text("Эдльдар Маршанкулов", (255, 255, 255), but_width, screen_height / 2 - 150)
+        draw_text("Никита Попов", (255, 255, 255), but_width, screen_height / 2 - 100)
+        draw_text("Main menu", (255, 255, 255), but_width, screen_height / 2 - 50)
+
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                f = open("files/res.txt", mode="w")
+                dies_and_wins = str(dies) + ' ' + str(wins)
+                f.write(dies_and_wins)
+                f.close()
+                pygame.quit()
+                sys.exit()
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if but_width <= x <= but_width + 200 and screen_height / 2 - 50 <= y <= screen_height / 2 - 10:
+                    main_menu()
+
+        pygame.display.flip()
+
+
+def defeat_screen():
+    global wins
+    global dies
+    pygame.init()
+    screen = pygame.display.set_mode(get_resolution())
+    pygame.display.set_caption("Alpha_0.1")
+    screen.fill(Color(back_color))
+
+    def draw_text(text, color, x, y):
+        font = pygame.font.SysFont('Calibri', 36)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    def draw_name(text, color, x, y):
+        font = pygame.font.SysFont('serif', 50)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    while True:
+        screen.fill((30, 30, 30))
+        but_width = screen_width / 2 - 50
+        but_h = screen_height / 2 - 50
+        draw_name("GAME OVER", (255, 255, 255), screen_width / 2 - 150, screen_height / 2 - 250)
+        draw_text("Restart", (255, 255, 255), but_width, screen_height / 2 - 150)
+        draw_text("Main menu", (255, 255, 255), but_width, screen_height / 2 - 100)
+        draw_text("Total wins and dies: " + str(wins) + ' ' + str(dies), (255, 255, 255), but_width - 50, but_h)
+
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                f = open("files/res.txt", mode="w")
+                dies_and_wins = str(dies) + ' ' + str(wins)
+                f.write(dies_and_wins)
+                f.close()
+                pygame.quit()
+                sys.exit()
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if but_width <= x <= but_width + 200 and screen_height / 2 - 150 <= y <= screen_height / 2 - 110:
+                    restart()
+                elif but_width <= x <= but_width + 200 and screen_height / 2 - 100 <= y <= screen_height / 2 - 60:
+                    main_menu()
+
+        pygame.display.flip()
+
+
+def victoty_screen():
+    global wins
+    global dies
+    pygame.init()
+    screen = pygame.display.set_mode(get_resolution())
+    pygame.display.set_caption("Alpha_0.1")
+    screen.fill(Color(back_color))
+
+    def draw_text(text, color, x, y):
+        font = pygame.font.SysFont('Calibri', 36)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    def draw_name(text, color, x, y):
+        font = pygame.font.SysFont('serif', 50)
+        label = font.render(text, True, color)
+        screen.blit(label, (x, y))
+
+    while True:
+        screen.fill((30, 30, 30))
+        but_width = screen_width / 2 - 50
+        but_h = screen_height / 2 - 50
+        draw_name("YOU WIN!", (255, 255, 255), screen_width / 2 - 150, screen_height / 2 - 250)
+        draw_text("Restart", (255, 255, 255), but_width, screen_height / 2 - 150)
+        draw_text("Main menu", (255, 255, 255), but_width, screen_height / 2 - 100)
+        draw_text("Total wins and dies: " + str(wins) + ' ' + str(dies), (255, 255, 255), but_width - 50, but_h)
+
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                f = open("files/res.txt", mode="w")
+                dies_and_wins = str(dies) + ' ' + str(wins)
+                f.write(dies_and_wins)
+                f.close()
+                pygame.quit()
+                sys.exit()
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if but_width <= x <= but_width + 200 and screen_height / 2 - 150 <= y <= screen_height / 2 - 110:
+                    restart()
+                elif but_width <= x <= but_width + 200 and screen_height / 2 - 100 <= y <= screen_height / 2 - 60:
+                    main_menu()
+
+        pygame.display.flip()
+
+
+def restart():
+    global lev
+    if lev == 1:
+        level_1()
+    elif lev == 2:
+        level_2()
+
+
+def level_1():
+    global level
+    global lev
+    lev = 1
+    level = [
+        "----------------------------------------------------------------------------------------------------------",
+        "-                                                                                                        -",
+        "-                                                                                                        -",
+        "-                                                                                                       &-",
+        "-                                 ----***----     -     -                              -------------------",
+        "-                                                          -                                             -",
+        "-                       *-----                             -                  -----                      -",
+        "-                                                          -                                             -",
+        "-                                                          --------------                                -",
+        "-                       -----                    *         -                 -----                       -",
+        "-                                                *         -                                             -",
+        "-                               ------------------         -                         ------------------  -",
+        "-                                         -                -                                             -",
+        "-                                         -                -                                             -",
+        "-                     --------            -  ------*-*-*-*--               --------                      -",
+        "-                                         -       *        -                                             -",
+        "-                                         -         *      -                                             -",
+        "-           --                            -           *    -                                             -",
+        "-                                         -             *  ---------------                               -",
+        "-                                         -               *-                                             -",
+        "-                  ----***----            -                -                      --                     -",
+        "-                                         -                -                                             -",
+        "-                                         -                                                              -",
+        "-                                         -                            --                                -",
+        "-                         ------------------               -                   ------------------        -",
+        "-                         -                                -                                             -",
+        "-         ------**        -                                ---------                                     -",
+        "-                         -                                                                              -",
+        "-                         -                                                    -      -                  -",
+        "-                         -                                                                              -",
+        "-                       ---                       ******                                                 -",
+        "-                       -                                                                    -           -",
+        "-                       -                                                                                -",
+        "-                       -                                                                                -",
+        "----------------------------------------------------------------------------------------------------------"]
+    main()
+
+
+def level_2():
+    global level
+    global lev
+    lev = 2
+    level = [
+        "----------------------------------------------------------------------------------------------------------",
+        "-                                                                                                        -",
+        "-                                                                                                        -",
+        "-                                                                                                       &-",
+        "-  -------------------------------------------------------------------------------------------------------",
+        "-  *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *     -",
+        "-                                                                                                        -",
+        "-    *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   -",
+        "-------------------------------------------------------------------------------------------------------  -",
+        "-        ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     -",
+        "-                                                                                                        -",
+        "-   ***      ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     **  -",
+        "-  -------------------------------------------------------------------------------------------------------",
+        "-      **    **    **    **    **    **    **    **    **    **    **    **    **    **    **    **      -",
+        "-                                                                                                        -",
+        "-   **    **    **    **    **    **    **    **    **    **    **    **    **    **    **    **    **   -",
+        "-------------------------------------------------------------------------------------------------------  -",
+        "-                                                                                                        -",
+        "-                                                                                                        -",
+        "-   ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***     ***  -",
+        "-  -------------------------------------------------------------------------------------------------------",
+        "-                                                                                                        -",
+        "-                                                                                                        -",
+        "-      **     **     **     **     **     **     **     **     **     **     **     **     **     **     -",
+        "------------------------------------------------------------------------------------------------------   -",
+        "-                                                                                                        -",
+        "-                                                                                                        -",
+        "-        ***            ***              ***                 ***               ***             ***       -",
+        "----------------------------------------------------------------------------------------------------------"]
+    main()
+
+
+#
+def main():
+    global wins
+    global dies
+    pygame.init()
+    screen = pygame.display.set_mode(get_resolution())
+    pygame.display.set_caption("Alpha_0.1")
+    screen.fill(Color(back_color))
+    background_image = pygame.image.load('files/background.png')
     bg = pygame.Surface((get_resolution()))
     bg.blit(background_image, (0, 0))
-    hero = Player(55, 1000)
+    if lev == 1:
+        hero = Player(55, 1000)
+    elif lev == 2:
+        hero = Player(55, 800)
     left = right = False
     up = False
     entities = pygame.sprite.Group()
     platforms = []
     entities.add(hero)
-    level = [
-        "----------------------------------------------------------------------------------------------------------",
-        "-                                                                                                        -",
-        "-                                                                                                        -",
-        "-                                                                                                        -",
-        "-                                 -----------     -     -                              -------------------",
-        "-                                                          -                                             -",
-        "-                       ------                             -                  -----                      -",
-        "-                                                          -                                             -",
-        "-                                                          --------------                                -",
-        "-                       -----                              -                 -----                       -",
-        "-                                                          -                                             -",
-        "-                               ------------------         -                         ------------------  -",
-        "-                                         -                -                                             -",
-        "-                                         -                -                                             -",
-        "-                     --------            -  ---------------               --------                      -",
-        "-                                         -                -                                             -",
-        "-                                         -                -                                             -",
-        "-           --                            -                -                                             -",
-        "-                                         -                ---------------                               -",
-        "-                                         -                -                                             -",
-        "-                  -----------            -                -                      --                     -",
-        "-                                         -                                                              -",
-        "-                                         -                                                              -",
-        "-                                         -                -           --                                -",
-        "-                         ------------------               -                   ------------------        -",
-        "-                         -                                -                                             -",
-        "-         --------        -                                ---------                                     -",
-        "-                         -                                                                              -",
-        "-                         -                                                    -      -                  -",
-        "-                         -                                                                              -",
-        "-                       ---                                                                              -",
-        "-                       -                                                                    -           -",
-        "-                       -                                                                                -",
-        "-                       -                                                                                -",
-        "----------------------------------------------------------------------------------------------------------"]
     x = y = 0
     for row in level:
         for col in row:
@@ -294,6 +501,14 @@ def main():
                 plat = Platform(x, y)
                 entities.add(plat)
                 platforms.append(plat)
+            if col == "*":
+                bd = BlockDie(x, y)
+                entities.add(bd)
+                platforms.append(bd)
+            if col == "&":
+                fin = BlockFinish(x, y)
+                entities.add(fin)
+                platforms.append(fin)
 
             x += PLATFORM_WIDTH
         y += PLATFORM_HEIGHT
@@ -308,9 +523,14 @@ def main():
     while running:
         for e in pygame.event.get():
             if e.type == QUIT:
+                f = open("files/res.txt", mode="w")
+                dies_and_wins = str(dies) + ' ' + str(wins)
+                f.write(dies_and_wins)
+                f.close()
                 running = False
             if e.type == KEYDOWN and e.key == K_ESCAPE:
                 running = False
+                main_menu()
             if e.type == KEYDOWN and e.key == K_a:
                 left = True
             if e.type == KEYUP and e.key == K_a:
@@ -322,6 +542,10 @@ def main():
             if e.type == KEYDOWN and e.key == K_w:
                 up = True
             if e.type == KEYUP and e.key == K_w:
+                up = False
+            if e.type == KEYDOWN and e.key == K_SPACE:
+                up = True
+            if e.type == KEYUP and e.key == K_SPACE:
                 up = False
         hero.update(left, right, up, platforms)
         camera.update(hero)  # центризируем камеру относительно персонажа
